@@ -1,5 +1,5 @@
 # TensorDictGraphViz
-
+Visualize neural network architectures created with tensordictmodules. Showing all possible submodules with their respective input and output keys and their underlying parameter
 
 
 # Example

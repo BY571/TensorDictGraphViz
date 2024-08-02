@@ -69,4 +69,7 @@ td_viz.view() # view the archiecture
 
 - Make cluster same level that are "end" rank
 - make arrows nicer to start/end at the cluster
-- add final output keys 
+- add final output keys
+
+- https://github.com/excalidraw could be interesting
+- 

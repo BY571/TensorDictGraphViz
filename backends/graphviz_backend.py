@@ -17,8 +17,10 @@ class GraphvizBackend(VisualizationBackend):
         self.graph.render(filename, format=format, cleanup=True)
         print(f"Graph saved as {filename}.{format}")
 
-    def view(self):
-        self.graph.view()
+    def view(self, wait=False):
+        self.graph.view(cleanup=True, quiet=True, quiet_view=True)
+        if wait:
+            input("Press Enter to continue...")
 
     def clear(self):
         self.graph.clear()

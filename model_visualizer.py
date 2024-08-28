@@ -200,8 +200,8 @@ class ModelVisualizer:
         # Add more layer types as needed
         return type(layer).__name__
 
-    def view(self):
-        self.backend.view()
+    def view(self, wait=False):
+        self.backend.view(wait)
 
     def clear(self):
         self.backend.clear()

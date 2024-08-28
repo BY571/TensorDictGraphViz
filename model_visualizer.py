@@ -35,11 +35,9 @@ class ModelVisualizer:
 
         if isinstance(self.model, nn.Sequential):
             self._visualize_sequential(self.model)
-        # elif isinstance(self.model, nn.Module):
-        #     self._visualize_module(self.model)
-        elif isinstance(self.model, TensorDictModule):
-            self._visualize_td_sequential(self.model)
-        elif isinstance(self.model, TensorDictSequential):
+        elif type(self.model) is TensorDictModule:
+           self._visualize_single_td_module(self.model)
+        elif type(self.model) is TensorDictSequential:
             self._visualize_td_sequential(self.model)
         else:
             raise TypeError(f"Unsupported model type: {type(self.model)}")
@@ -118,16 +116,83 @@ class ModelVisualizer:
         with self.backend.graph.subgraph(name="cluster_td_sequential") as c:
             c.attr(label="TensorDictSequential", style="filled", color="white")
             
-            prev_module_exit = "td_seq_input"
-            c.node(prev_module_exit, "Input\nTensorDict", shape="box", style="filled", fillcolor="lightblue")
+            input_nodes = {}
+            output_nodes = {}
 
+            # First pass: Create all nodes
             for i, td_module in enumerate(sequential_td_module):
                 entry_node, exit_node = self._visualize_td_module(td_module, c, i)
-                c.edge(prev_module_exit, entry_node)
-                prev_module_exit = exit_node
+                
+                # Group modules by input keys
+                in_keys = tuple(td_module.in_keys)
+                if in_keys not in input_nodes:
+                    input_nodes[in_keys] = []
+                input_nodes[in_keys].append(entry_node)
+                
+                # Group modules by output keys
+                out_keys = tuple(td_module.out_keys)
+                if out_keys not in output_nodes:
+                    output_nodes[out_keys] = []
+                output_nodes[out_keys].append(exit_node)
 
-            c.node("td_seq_output", "Output\nTensorDict", shape="box", style="filled", fillcolor="lightgreen")
-            c.edge(prev_module_exit, "td_seq_output")
+            # Second pass: Connect nodes
+            for in_keys, entries in input_nodes.items():
+                input_key = "_".join(in_keys)
+                input_node = f"input_{input_key}"
+                c.node(input_node, f"Input\n{', '.join(in_keys)}", shape="box", style="filled", fillcolor="lightblue")
+                for entry in entries:
+                    c.edge(input_node, entry)
+
+            for out_keys, exits in output_nodes.items():
+                output_key = "_".join(out_keys)
+                output_node = f"output_{output_key}"
+                c.node(output_node, f"Output\n{', '.join(out_keys)}", shape="box", style="filled", fillcolor="lightgreen")
+                for exit in exits:
+                    c.edge(exit, output_node)
+
+            # Connect outputs to inputs based on key matching
+            for out_keys, exits in output_nodes.items():
+                for in_keys, entries in input_nodes.items():
+                    if set(out_keys) & set(in_keys):  # If there's any overlap in keys
+                        out_node = f"output_{'_'.join(out_keys)}"
+                        in_node = f"input_{'_'.join(in_keys)}"
+                        c.edge(out_node, in_node, style="dashed")
+
+    def _visualize_single_td_module(self, td_module):
+        self.backend.graph.attr(rankdir="TB", splines="ortho")
+        
+        with self.backend.graph.subgraph(name="cluster_single_td_module") as c:
+            c.attr(label="TensorDictModule", style="filled", color="white")
+            
+            in_keys = ", ".join(td_module.in_keys) if td_module.in_keys else "None"
+            out_keys = ", ".join(td_module.out_keys) if td_module.out_keys else "None"
+
+            # Input node
+            c.node("input", f"Input\n{in_keys}", shape="box", style="filled", fillcolor="lightblue")
+
+            # TensorDictModule
+            module_name = "TDModule"
+            with c.subgraph(name=f"cluster_{module_name}") as s:
+                s.attr(label=module_name, style="filled", color="lightgrey")
+                
+                # Internal module subgraph
+                with s.subgraph(name=f"cluster_{module_name}_internal") as internal:
+                    internal.attr(label="Internal Module", style="filled", color="white")
+                    
+                    first_internal_node, last_internal_node = self._visualize_module(td_module.module, module_name, internal)
+                    
+                    if first_internal_node is None:
+                        # If the internal module is empty, create a dummy node
+                        dummy_name = f"{module_name}_internal_dummy"
+                        internal.node(dummy_name, "Empty Module", shape="box")
+                        first_internal_node = last_internal_node = dummy_name
+
+            # Output node
+            c.node("output", f"Output\n{out_keys}", shape="box", style="filled", fillcolor="lightgreen")
+            
+            # Connect nodes
+            c.edge("input", first_internal_node)
+            c.edge(last_internal_node, "output")
 
     def _get_layer_label(self, layer):
         if isinstance(layer, nn.Linear):

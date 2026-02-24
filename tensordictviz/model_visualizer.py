@@ -6,6 +6,22 @@ import torch.nn as nn
 from .backends import GraphvizBackend  # Import GraphvizBackend
 from tensordict.nn import TensorDictModule, TensorDictSequential
 
+DARK_THEME = {
+    "bg": "#1a1a2e",
+    "module_fill": "#16213e",
+    "module_border": "#0f3460",
+    "module_text": "#e0e0e0",
+    "key_input": "#2d6a4f",
+    "key_intermediate": "#b8860b",
+    "key_output": "#1a5276",
+    "key_text": "#e0e0e0",
+    "edge_internal": "#e94560",
+    "edge_key": "#53a8b6",
+    "cluster_border": "#333366",
+    "cluster_fill": "#1a1a2e",
+    "font": "Helvetica",
+}
+
 
 def _format_key(key):
     """Stringify a TensorDict key (which may be a string or a tuple of strings)."""
@@ -44,7 +60,7 @@ class ModelVisualizer:
         else:
             raise ValueError(f"Unsupported backend: {backend_name}")
 
-    def visualize(self, render: bool = True, model: Optional[Any] = None):
+    def visualize(self, render: bool = True, model: Optional[Any] = None, detail: str = "compact"):
         if model is not None:
             self.model = model
         elif self.model is None:
@@ -53,7 +69,7 @@ class ModelVisualizer:
         if isinstance(self.model, nn.Sequential) and not isinstance(self.model, TensorDictSequential):
             self._visualize_sequential(self.model)
         elif isinstance(self.model, (TensorDictModule, TensorDictSequential)):
-            self._visualize_td_sequential(self.model)
+            self._visualize_td_sequential(self.model, detail=detail)
         elif isinstance(self.model, nn.Module):
             self._visualize_generic_module(self.model)
         else:
@@ -136,7 +152,7 @@ class ModelVisualizer:
 
         return entry_node_name, exit_node_name
 
-    def _visualize_td_sequential(self, model):
+    def _visualize_td_sequential(self, model, detail="compact"):
         self.backend.set_graph_attr(rankdir="TB", splines="ortho")
 
         seq_label = "TensorDictSequential" if isinstance(model, TensorDictSequential) else "TensorDictModule"

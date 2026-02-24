@@ -363,3 +363,52 @@ class TestSubgraphStack:
 
         assert len(viz.backend._stack) == 1
         assert viz.backend._stack[0] is viz.backend.graph
+
+
+# ---------------------------------------------------------------------------
+# _get_layer_summary / _get_module_summary
+# ---------------------------------------------------------------------------
+
+class TestLayerSummary:
+    def _viz(self):
+        return ModelVisualizer()
+
+    def test_linear_summary(self):
+        layer = nn.Linear(4, 5)
+        assert self._viz()._get_layer_summary(layer) == "Linear(4\u21925)"
+
+    def test_conv2d_summary(self):
+        layer = nn.Conv2d(1, 32, kernel_size=3)
+        assert self._viz()._get_layer_summary(layer) == "Conv2d(1\u219232)"
+
+    def test_relu_summary(self):
+        layer = nn.ReLU()
+        assert self._viz()._get_layer_summary(layer) == "ReLU"
+
+    def test_dropout_summary(self):
+        layer = nn.Dropout(0.5)
+        assert self._viz()._get_layer_summary(layer) == "Drop(0.5)"
+
+    def test_unknown_layer_summary(self):
+        layer = nn.Sigmoid()
+        assert self._viz()._get_layer_summary(layer) == "Sigmoid"
+
+
+class TestModuleSummary:
+    def _viz(self):
+        return ModelVisualizer()
+
+    def test_sequential_chain(self):
+        module = nn.Sequential(nn.Linear(4, 5), nn.ReLU(), nn.Linear(5, 3))
+        result = self._viz()._get_module_summary(module)
+        assert result == "Linear(4\u21925) \u2192 ReLU \u2192 Linear(5\u21923)"
+
+    def test_single_layer(self):
+        module = nn.Sequential(nn.Linear(4, 2))
+        result = self._viz()._get_module_summary(module)
+        assert result == "Linear(4\u21922)"
+
+    def test_empty_module_uses_class_name(self):
+        module = nn.Module()
+        result = self._viz()._get_module_summary(module)
+        assert result == "Module"

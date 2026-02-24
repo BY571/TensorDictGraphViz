@@ -233,6 +233,23 @@ class ModelVisualizer:
         # Add more layer types as needed
         return type(layer).__name__
 
+    def _get_layer_summary(self, layer):
+        """One-line compact summary of a layer for compact mode."""
+        if isinstance(layer, nn.Linear):
+            return f"Linear({layer.in_features}\u2192{layer.out_features})"
+        elif isinstance(layer, nn.Conv2d):
+            return f"Conv2d({layer.in_channels}\u2192{layer.out_channels})"
+        elif isinstance(layer, nn.Dropout):
+            return f"Drop({layer.p})"
+        return type(layer).__name__
+
+    def _get_module_summary(self, module):
+        """Chain summary like 'Linear(4\u21925) \u2192 ReLU \u2192 Linear(5\u21923)'."""
+        parts = []
+        for name, layer in module.named_children():
+            parts.append(self._get_layer_summary(layer))
+        return " \u2192 ".join(parts) if parts else type(module).__name__
+
     def view(self, wait=False):
         self.backend.view(wait)
 

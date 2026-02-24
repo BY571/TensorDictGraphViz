@@ -7,6 +7,23 @@ from .backends import GraphvizBackend  # Import GraphvizBackend
 from tensordict.nn import TensorDictModule, TensorDictSequential
 
 
+def _format_key(key):
+    """Stringify a TensorDict key (which may be a string or a tuple of strings)."""
+    if isinstance(key, tuple):
+        return ".".join(key)
+    return str(key)
+
+
+def _format_keys(keys):
+    """Stringify a list of TensorDict keys, joining them with ', '."""
+    return ", ".join(_format_key(k) for k in keys)
+
+
+def _join_keys(keys, sep="_"):
+    """Join a list of TensorDict keys into a single ID string."""
+    return sep.join(_format_key(k) for k in keys)
+
+
 class ModelVisualizer:
     def __init__(
         self,
@@ -78,8 +95,8 @@ class ModelVisualizer:
         return first_node, prev_node
 
     def _visualize_td_module(self, td_module, subgraph, index):
-        in_keys = ", ".join(td_module.in_keys) if td_module.in_keys else "None"
-        out_keys = ", ".join(td_module.out_keys) if td_module.out_keys else "None"
+        in_keys = _format_keys(td_module.in_keys) if td_module.in_keys else "None"
+        out_keys = _format_keys(td_module.out_keys) if td_module.out_keys else "None"
 
         module_name = f"TDModule_{index}"
 
@@ -93,13 +110,17 @@ class ModelVisualizer:
             # Internal module subgraph
             with s.subgraph(name=f"cluster_{module_name}_internal") as internal:
                 internal.attr(label="Internal Module", style="filled", color="white")
-                
-                first_internal_node, last_internal_node = self._visualize_module(td_module.module, module_name, internal)
-                
+
+                inner_module = getattr(td_module, "module", None)
+                if inner_module is not None:
+                    first_internal_node, last_internal_node = self._visualize_module(inner_module, module_name, internal)
+                else:
+                    first_internal_node = last_internal_node = None
+
                 if first_internal_node is None:
-                    # If the internal module is empty, create a dummy node
                     dummy_name = f"{module_name}_internal_dummy"
-                    internal.node(dummy_name, "Empty Module", shape="box")
+                    label = type(td_module).__name__ if inner_module is None else "Empty Module"
+                    internal.node(dummy_name, label, shape="box")
                     first_internal_node = last_internal_node = dummy_name
 
             # Exit node
@@ -142,16 +163,16 @@ class ModelVisualizer:
 
             # Second pass: Connect nodes
             for in_keys, entries in input_nodes.items():
-                input_key = "_".join(in_keys)
+                input_key = _join_keys(in_keys)
                 input_node = f"input_{input_key}"
-                c.node(input_node, f"Input\n{', '.join(in_keys)}", shape="box", style="filled", fillcolor="lightblue")
+                c.node(input_node, f"Input\n{_format_keys(in_keys)}", shape="box", style="filled", fillcolor="lightblue")
                 for entry in entries:
                     c.edge(input_node, entry, style="dotted", color="lightblue", penwidth="0.5")
 
             for out_keys, exits in output_nodes.items():
-                output_key = "_".join(out_keys)
+                output_key = _join_keys(out_keys)
                 output_node = f"output_{output_key}"
-                c.node(output_node, f"Output\n{', '.join(out_keys)}", shape="box", style="filled", fillcolor="lightblue")
+                c.node(output_node, f"Output\n{_format_keys(out_keys)}", shape="box", style="filled", fillcolor="lightblue")
                 for exit in exits:
                     c.edge(exit, output_node, style="dotted", color="lightblue", penwidth="0.5")
 
@@ -160,8 +181,8 @@ class ModelVisualizer:
                 for out_keys, exits in output_nodes.items():
                     for in_keys, entries in input_nodes.items():
                         if set(out_keys) & set(in_keys):  # If there's any overlap in keys
-                            out_node = f"output_{'_'.join(out_keys)}"
-                            in_node = f"input_{'_'.join(in_keys)}"
+                            out_node = f"output_{_join_keys(out_keys)}"
+                            in_node = f"input_{_join_keys(in_keys)}"
                             c.edge(out_node, in_node, style="dotted", color="lightblue", penwidth="0.5")
 
     def _visualize_generic_module(self, model):

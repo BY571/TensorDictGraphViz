@@ -44,8 +44,8 @@ uv run pytest
 
 | Priority | Task | Effort |
 |----------|------|--------|
-| **P0** | Fix nested key crash — `", ".join(in_keys)` fails on tuple keys like `("agents", "observation")` | Small |
-| **P0** | Fix `ProbabilisticTensorDictModule` crash — `.module` access doesn't exist on it | Small |
+| ~~**P0**~~ | ~~Fix nested key crash~~ — Done: added `_format_key`/`_format_keys`/`_join_keys` helpers | ~~Small~~ |
+| ~~**P0**~~ | ~~Fix `ProbabilisticTensorDictModule` crash~~ — Done: guarded `.module` access with `getattr` | ~~Small~~ |
 | **P1** | Add basic tests covering the 3 visualization paths + edge cases | Medium |
 | **P2** | Fix backend abstraction leak — `_visualize_td_sequential` bypasses backend interface, calls `self.backend.graph` directly | Medium |
 | **P2** | Support nested `TensorDictSequential` (recursive visualization) | Medium |

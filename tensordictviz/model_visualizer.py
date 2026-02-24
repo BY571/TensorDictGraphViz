@@ -94,6 +94,7 @@ class ModelVisualizer:
         self.backend.create_edge(prev_node, "output")
 
     def _visualize_module(self, model, parent_name):
+        T = DARK_THEME
         first_node = None
         prev_node = None
 
@@ -101,16 +102,54 @@ class ModelVisualizer:
             layer_name = f"{parent_name}_layer_{i}"
             label = self._get_layer_label(layer)
 
-            self.backend.create_node(layer_name, label, shape="box")
+            self.backend.create_node(layer_name, label, shape="box",
+                                     style="filled,rounded",
+                                     fillcolor=T["module_fill"],
+                                     fontcolor=T["module_text"],
+                                     fontname=T["font"])
             if prev_node:
-                self.backend.create_edge(prev_node, layer_name)
+                self.backend.create_edge(prev_node, layer_name,
+                                         color=T["edge_internal"])
             else:
                 first_node = layer_name
             prev_node = layer_name
 
         return first_node, prev_node
 
-    def _visualize_td_module(self, td_module, index):
+    def _visualize_td_module(self, td_module, index, detail="compact"):
+        if detail == "compact":
+            return self._visualize_td_module_compact(td_module, index)
+        else:
+            return self._visualize_td_module_full(td_module, index)
+
+    def _visualize_td_module_compact(self, td_module, index):
+        """Render a TDModule as a single styled node."""
+        T = DARK_THEME
+        module_name = f"TDModule_{index}"
+
+        inner_module = getattr(td_module, "module", None)
+        if inner_module is not None:
+            summary = self._get_module_summary(inner_module)
+        else:
+            summary = type(td_module).__name__
+
+        label = f"{module_name}\n{summary}"
+        node_id = f"module_{index}"
+
+        self.backend.create_node(
+            node_id, label,
+            shape="box", style="filled,rounded",
+            fillcolor=T["module_fill"],
+            color=T["module_border"],
+            fontcolor=T["module_text"],
+            fontname=T["font"],
+        )
+
+        return node_id, node_id  # both entry and exit are the same node
+
+    def _visualize_td_module_full(self, td_module, index):
+        """Render a TDModule as an expanded cluster with individual layers."""
+        T = DARK_THEME
         in_keys = _format_keys(td_module.in_keys) if td_module.in_keys else "None"
         out_keys = _format_keys(td_module.out_keys) if td_module.out_keys else "None"
 
@@ -118,16 +157,23 @@ class ModelVisualizer:
 
         with self.backend.subgraph(name=f"cluster_{module_name}",
                                    label=module_name, style="filled",
-                                   color="lightgrey", rankdir="TB"):
-            # Entry node
+                                   color=T["cluster_border"],
+                                   fillcolor=T["module_fill"],
+                                   fontname=T["font"],
+                                   fontcolor=T["module_text"]):
             entry_node_name = f"{module_name}_entry"
-            self.backend.create_node(entry_node_name, f"In Key: {in_keys}",
-                                     shape="box", style="filled", fillcolor="white")
+            self.backend.create_node(entry_node_name, f"In: {in_keys}",
+                                     shape="box", style="filled,rounded",
+                                     fillcolor=T["key_input"],
+                                     fontcolor=T["key_text"],
+                                     fontname=T["font"])
 
-            # Internal module subgraph
             with self.backend.subgraph(name=f"cluster_{module_name}_internal",
-                                       label="Internal Module", style="filled",
-                                       color="white"):
+                                       label="Layers", style="filled",
+                                       color=T["cluster_border"],
+                                       fillcolor="#0d1b2a",
+                                       fontname=T["font"],
+                                       fontcolor=T["module_text"]):
                 inner_module = getattr(td_module, "module", None)
                 if inner_module is not None:
                     first_internal_node, last_internal_node = self._visualize_module(
@@ -138,76 +184,98 @@ class ModelVisualizer:
                 if first_internal_node is None:
                     dummy_name = f"{module_name}_internal_dummy"
                     label = type(td_module).__name__ if inner_module is None else "Empty Module"
-                    self.backend.create_node(dummy_name, label, shape="box")
+                    self.backend.create_node(dummy_name, label, shape="box",
+                                             style="filled,rounded",
+                                             fillcolor=T["module_fill"],
+                                             fontcolor=T["module_text"],
+                                             fontname=T["font"])
                     first_internal_node = last_internal_node = dummy_name
 
-            # Exit node
             exit_node_name = f"{module_name}_exit"
-            self.backend.create_node(exit_node_name, f"Out Key: {out_keys}",
-                                     shape="box", style="filled", fillcolor="white")
+            self.backend.create_node(exit_node_name, f"Out: {out_keys}",
+                                     shape="box", style="filled,rounded",
+                                     fillcolor=T["key_output"],
+                                     fontcolor=T["key_text"],
+                                     fontname=T["font"])
 
-            # Connect nodes
-            self.backend.create_edge(entry_node_name, first_internal_node)
-            self.backend.create_edge(last_internal_node, exit_node_name)
+            self.backend.create_edge(entry_node_name, first_internal_node,
+                                     color=T["edge_internal"])
+            self.backend.create_edge(last_internal_node, exit_node_name,
+                                     color=T["edge_internal"])
 
         return entry_node_name, exit_node_name
 
     def _visualize_td_sequential(self, model, detail="compact"):
-        self.backend.set_graph_attr(rankdir="TB", splines="ortho")
+        T = DARK_THEME
+        self.backend.set_graph_attr(
+            rankdir="TB", splines="ortho",
+            bgcolor=T["bg"], fontname=T["font"], fontcolor=T["module_text"],
+        )
 
-        seq_label = "TensorDictSequential" if isinstance(model, TensorDictSequential) else "TensorDictModule"
-        with self.backend.subgraph(name="cluster_td_sequential",
-                                   label=seq_label, style="filled", color="white"):
-            input_nodes = {}
-            output_nodes = {}
+        seq_label = ("TensorDictSequential"
+                     if isinstance(model, TensorDictSequential)
+                     else "TensorDictModule")
+        with self.backend.subgraph(
+                name="cluster_td_sequential", label=seq_label,
+                style="filled", color=T["cluster_border"],
+                fillcolor=T["cluster_fill"],
+                fontname=T["font"], fontcolor=T["module_text"]):
 
-            # Handle both TensorDictSequential and single TensorDictModule
-            modules = model if isinstance(model, TensorDictSequential) else [model]
+            modules = (model if isinstance(model, TensorDictSequential)
+                       else [model])
 
-            # First pass: Create all nodes
+            # Per-key tracking
+            produced_by = {}  # formatted_key -> [exit_node_id, ...]
+            consumed_by = {}  # formatted_key -> [entry_node_id, ...]
+
+            # First pass: create module nodes
             for i, td_module in enumerate(modules):
-                entry_node, exit_node = self._visualize_td_module(td_module, i)
+                entry_node, exit_node = self._visualize_td_module(
+                    td_module, i, detail=detail)
 
-                # Group modules by input keys
-                in_keys = tuple(td_module.in_keys)
-                if in_keys not in input_nodes:
-                    input_nodes[in_keys] = []
-                input_nodes[in_keys].append(entry_node)
+                for key in td_module.in_keys:
+                    fk = _format_key(key)
+                    consumed_by.setdefault(fk, []).append(entry_node)
 
-                # Group modules by output keys
-                out_keys = tuple(td_module.out_keys)
-                if out_keys not in output_nodes:
-                    output_nodes[out_keys] = []
-                output_nodes[out_keys].append(exit_node)
+                for key in td_module.out_keys:
+                    fk = _format_key(key)
+                    produced_by.setdefault(fk, []).append(exit_node)
 
-            # Second pass: Connect nodes
-            for in_keys, entries in input_nodes.items():
-                input_key = _join_keys(in_keys)
-                input_node = f"input_{input_key}"
-                self.backend.create_node(input_node, f"Input\n{_format_keys(in_keys)}",
-                                         shape="box", style="filled", fillcolor="lightblue")
-                for entry in entries:
-                    self.backend.create_edge(input_node, entry, style="dotted",
-                                             color="lightblue", penwidth="0.5")
+            # Second pass: create single key nodes, preserving insertion order
+            all_keys = list(dict.fromkeys(
+                [_format_key(k) for m in modules for k in m.in_keys] +
+                [_format_key(k) for m in modules for k in m.out_keys]
+            ))
 
-            for out_keys, exits in output_nodes.items():
-                output_key = _join_keys(out_keys)
-                output_node = f"output_{output_key}"
-                self.backend.create_node(output_node, f"Output\n{_format_keys(out_keys)}",
-                                         shape="box", style="filled", fillcolor="lightblue")
-                for exit_n in exits:
-                    self.backend.create_edge(exit_n, output_node, style="dotted",
-                                             color="lightblue", penwidth="0.5")
+            for key in all_keys:
+                is_produced = key in produced_by
+                is_consumed = key in consumed_by
 
-            # Connect outputs to inputs based on key matching (only for TensorDictSequential)
-            if isinstance(model, TensorDictSequential):
-                for out_keys, exits in output_nodes.items():
-                    for in_keys, entries in input_nodes.items():
-                        if set(out_keys) & set(in_keys):
-                            out_node = f"output_{_join_keys(out_keys)}"
-                            in_node = f"input_{_join_keys(in_keys)}"
-                            self.backend.create_edge(out_node, in_node, style="dotted",
-                                                     color="lightblue", penwidth="0.5")
+                if is_produced and is_consumed:
+                    fillcolor = T["key_intermediate"]
+                elif is_produced:
+                    fillcolor = T["key_output"]
+                else:
+                    fillcolor = T["key_input"]
+
+                key_node_id = f"key_{key}"
+                self.backend.create_node(
+                    key_node_id, key,
+                    shape="ellipse", style="filled",
+                    fillcolor=fillcolor,
+                    fontcolor=T["key_text"],
+                    fontname=T["font"],
+                )
+
+                for exit_node in produced_by.get(key, []):
+                    self.backend.create_edge(
+                        exit_node, key_node_id,
+                        color=T["edge_key"], penwidth="1.5")
+
+                for entry_node in consumed_by.get(key, []):
+                    self.backend.create_edge(
+                        key_node_id, entry_node,
+                        color=T["edge_key"], penwidth="1.5")
 
     def _visualize_generic_module(self, model):
         self.backend.set_graph_attr(rankdir="TB", splines="ortho")

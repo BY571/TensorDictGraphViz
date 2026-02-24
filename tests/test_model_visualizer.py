@@ -412,3 +412,126 @@ class TestModuleSummary:
         module = nn.Module()
         result = self._viz()._get_module_summary(module)
         assert result == "Module"
+
+
+# ---------------------------------------------------------------------------
+# Compact mode vs full mode
+# ---------------------------------------------------------------------------
+
+class TestCompactMode:
+    def test_compact_td_module_is_single_node(self):
+        """In compact mode, each TDModule is one node, not a cluster."""
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False, detail="compact")
+
+        src = _source(viz)
+        assert "cluster_TDModule_0" not in src
+        assert "Linear(4" in src
+
+    def test_compact_shows_layer_chain(self):
+        """Compact mode shows the layer summary chain."""
+        net = nn.Sequential(nn.Linear(4, 5), nn.ReLU(), nn.Linear(5, 3))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False, detail="compact")
+
+        src = _source(viz)
+        assert "\u2192" in src
+
+    def test_full_mode_has_clusters(self):
+        """detail='full' preserves expanded cluster view."""
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False, detail="full")
+
+        src = _source(viz)
+        assert "cluster_TDModule_0" in src
+
+    def test_probabilistic_compact(self):
+        """ProbabilisticTensorDictModule shows class name in compact mode."""
+        from tensordict.nn.distributions import NormalParamExtractor
+        net = nn.Sequential(nn.Linear(4, 8), NormalParamExtractor())
+        param_mod = TensorDictModule(net, in_keys=["obs"], out_keys=["loc", "scale"])
+        prob_mod = ProbabilisticTensorDictModule(
+            in_keys=["loc", "scale"],
+            out_keys=["action"],
+            distribution_class=Normal,
+        )
+        actor = TensorDictSequential(param_mod, prob_mod)
+        viz = ModelVisualizer(model=actor)
+        viz.visualize(render=False, detail="compact")
+
+        src = _source(viz)
+        assert "ProbabilisticTensorDictModule" in src
+        assert "loc" in src
+        assert "action" in src
+
+
+# ---------------------------------------------------------------------------
+# Single key nodes
+# ---------------------------------------------------------------------------
+
+class TestSingleKeyNodes:
+    def test_intermediate_key_is_single_node(self):
+        m1 = nn.Sequential(nn.Linear(4, 8))
+        m2 = nn.Sequential(nn.Linear(8, 2))
+        model = TensorDictSequential(
+            TensorDictModule(m1, in_keys=["obs"], out_keys=["hidden"]),
+            TensorDictModule(m2, in_keys=["hidden"], out_keys=["action"]),
+        )
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "key_hidden" in src
+        assert "input_hidden" not in src
+        assert "output_hidden" not in src
+
+    def test_input_only_key_colored_green(self):
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "key_obs" in src
+        assert "#2d6a4f" in src
+
+    def test_output_only_key_colored_blue(self):
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "key_act" in src
+        assert "#1a5276" in src
+
+    def test_intermediate_key_colored_amber(self):
+        m1 = nn.Sequential(nn.Linear(4, 8))
+        m2 = nn.Sequential(nn.Linear(8, 2))
+        model = TensorDictSequential(
+            TensorDictModule(m1, in_keys=["obs"], out_keys=["hidden"]),
+            TensorDictModule(m2, in_keys=["hidden"], out_keys=["action"]),
+        )
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "#b8860b" in src
+
+    def test_shared_input_key_connects_to_both_modules(self):
+        m1 = nn.Sequential(nn.Linear(4, 2))
+        m2 = nn.Sequential(nn.Linear(4, 3))
+        model = TensorDictSequential(
+            TensorDictModule(m1, in_keys=["latent"], out_keys=["a"]),
+            TensorDictModule(m2, in_keys=["latent"], out_keys=["b"]),
+        )
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "key_latent" in src

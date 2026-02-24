@@ -49,6 +49,6 @@ uv run pytest
 | ~~**P1**~~ | ~~Add basic tests~~ — Done: 30 tests in `tests/test_model_visualizer.py` (3 viz paths, nested keys, ProbabilisticTDM, error handling, helpers) | ~~Medium~~ |
 | ~~**P2**~~ | ~~Fix backend abstraction leak~~ — Done: added `set_graph_attr`/`subgraph` context manager to ABC; `GraphvizBackend` uses stack-based scoping; visualizer no longer touches `self.backend.graph` | ~~Medium~~ |
 | **P2** | Support nested `TensorDictSequential` (recursive visualization) | Medium |
-| **P3** | Improve graph aesthetics (cluster rank alignment, arrow routing, final output keys) | Medium |
+| ~~**P3**~~ | ~~Improve graph aesthetics~~ — Done: dark theme, single key nodes (role-classified colors), compact/full detail modes, rounded nodes, Helvetica font | ~~Medium~~ |
 | **P3** | Clean up Excalidraw backend stub or remove it | Small |
 | **P4** | Update README with current API and fresh example images | Small |

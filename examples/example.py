@@ -21,15 +21,17 @@ td_model = TensorDictModule(model1, in_keys=["observation"], out_keys=["action"]
 single_torch_model = nn.Sequential(nn.Linear(4, 5), nn.ReLU(), nn.Linear(5, 3))
 
 # Function to visualize and display a model
-def visualize_model(model, title):
+def visualize_model(model, title, detail="compact"):
     visualizer = ModelVisualizer(model=model, backend="graphviz")
-    visualizer.visualize(render=False)
-    visualizer.backend.graph.attr(label=title)  # Set the title for the graph
-    visualizer.view(wait=True)  # Add wait=True parameter
+    visualizer.visualize(render=False, detail=detail)
+    visualizer.backend.set_graph_attr(label=title)
+    visualizer.view(wait=True)
     del visualizer
 
 # Visualize different models
 visualize_model(single_torch_model, "PyTorch Sequential Model")
 visualize_model(td_model, "Single TensorDictModule")
-visualize_model(seq_td_module, "TensorDictSequential Model")
+visualize_model(seq_td_module, "TensorDictSequential Model (Compact)")
 
+# Compare compact vs full detail
+visualize_model(seq_td_module, "TensorDictSequential Model (Full)", detail="full")

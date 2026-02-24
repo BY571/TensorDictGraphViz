@@ -1,4 +1,4 @@
-from model_visualizer import ModelVisualizer
+from tensordictviz import ModelVisualizer
 from torch import nn
 from tensordict.nn import TensorDictModule, TensorDictSequential
 

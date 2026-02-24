@@ -1,4 +1,4 @@
-# model_visualizer/backends/__init__.py
+# tensordictviz/backends/__init__.py
 
 from .base_backend import VisualizationBackend
 from .graphviz_backend import GraphvizBackend

@@ -1,4 +1,4 @@
-# model_visualizer/backends/base_backend.py
+# tensordictviz/backends/base_backend.py
 
 from abc import ABC, abstractmethod
 

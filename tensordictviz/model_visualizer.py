@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 import torch.nn as nn
 
 # import VisualizationBackend  # Import the base class
-from backends import GraphvizBackend  # Import GraphvizBackend
+from .backends import GraphvizBackend  # Import GraphvizBackend
 from tensordict.nn import TensorDictModule, TensorDictSequential
 
 

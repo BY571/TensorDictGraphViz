@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tensordictviz"
+version = "0.1.0"
+description = "Visualize neural network architectures built with TorchRL's TensorDictModule"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+    "graphviz",
+]
+
+[project.optional-dependencies]
+torch = [
+    "torch",
+    "tensordict",
+]
+dev = [
+    "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tensordictviz"]

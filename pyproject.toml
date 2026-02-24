@@ -22,5 +22,8 @@ dev = [
     "pytest",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["tensordictviz"]

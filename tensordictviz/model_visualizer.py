@@ -6,19 +6,20 @@ import torch.nn as nn
 from .backends import GraphvizBackend  # Import GraphvizBackend
 from tensordict.nn import TensorDictModule, TensorDictSequential
 
-DARK_THEME = {
-    "bg": "#1a1a2e",
-    "module_fill": "#16213e",
-    "module_border": "#0f3460",
-    "module_text": "#e0e0e0",
-    "key_input": "#2d6a4f",
-    "key_intermediate": "#b8860b",
-    "key_output": "#1a5276",
-    "key_text": "#e0e0e0",
-    "edge_internal": "#e94560",
-    "edge_key": "#53a8b6",
-    "cluster_border": "#333366",
-    "cluster_fill": "#1a1a2e",
+THEME = {
+    "bg": "white",
+    "module_fill": "#f8f9fa",
+    "module_border": "#c4c4c4",
+    "module_text": "#2d2d2d",
+    "key_input": "#d4edda",
+    "key_intermediate": "#e8daef",
+    "key_output": "#d1ecf1",
+    "key_text": "#2d2d2d",
+    "edge_internal": "#888888",
+    "edge_key": "#6c757d",
+    "cluster_border": "#dee2e6",
+    "cluster_fill": "#ffffff",
+    "cluster_inner_fill": "#f1f3f5",
     "font": "Helvetica",
 }
 
@@ -80,7 +81,7 @@ class ModelVisualizer:
             self.backend.render("model_visualization")
 
     def _visualize_sequential(self, model):
-        T = DARK_THEME
+        T = THEME
         self.backend.set_graph_attr(
             rankdir="TB", bgcolor=T["bg"],
             fontname=T["font"], fontcolor=T["module_text"],
@@ -111,7 +112,7 @@ class ModelVisualizer:
                                  color=T["edge_internal"])
 
     def _visualize_module(self, model, parent_name):
-        T = DARK_THEME
+        T = THEME
         first_node = None
         prev_node = None
 
@@ -141,7 +142,7 @@ class ModelVisualizer:
 
     def _visualize_td_module_compact(self, td_module, index):
         """Render a TDModule as a single styled node."""
-        T = DARK_THEME
+        T = THEME
         module_name = f"TDModule_{index}"
 
         inner_module = getattr(td_module, "module", None)
@@ -166,7 +167,7 @@ class ModelVisualizer:
 
     def _visualize_td_module_full(self, td_module, index):
         """Render a TDModule as an expanded cluster with individual layers."""
-        T = DARK_THEME
+        T = THEME
         in_keys = _format_keys(td_module.in_keys) if td_module.in_keys else "None"
         out_keys = _format_keys(td_module.out_keys) if td_module.out_keys else "None"
 
@@ -188,7 +189,7 @@ class ModelVisualizer:
             with self.backend.subgraph(name=f"cluster_{module_name}_internal",
                                        label="Layers", style="filled",
                                        color=T["cluster_border"],
-                                       fillcolor="#0d1b2a",
+                                       fillcolor=T["cluster_inner_fill"],
                                        fontname=T["font"],
                                        fontcolor=T["module_text"]):
                 inner_module = getattr(td_module, "module", None)
@@ -223,7 +224,7 @@ class ModelVisualizer:
         return entry_node_name, exit_node_name
 
     def _visualize_td_sequential(self, model, detail="compact"):
-        T = DARK_THEME
+        T = THEME
         self.backend.set_graph_attr(
             rankdir="TB", splines="ortho",
             bgcolor=T["bg"], fontname=T["font"], fontcolor=T["module_text"],
@@ -244,8 +245,9 @@ class ModelVisualizer:
             # Per-key tracking
             produced_by = {}  # formatted_key -> [exit_node_id, ...]
             consumed_by = {}  # formatted_key -> [entry_node_id, ...]
+            key_dims = {}     # formatted_key -> dimension (int)
 
-            # First pass: create module nodes
+            # First pass: create module nodes and collect dimensions
             for i, td_module in enumerate(modules):
                 entry_node, exit_node = self._visualize_td_module(
                     td_module, i, detail=detail)
@@ -257,6 +259,18 @@ class ModelVisualizer:
                 for key in td_module.out_keys:
                     fk = _format_key(key)
                     produced_by.setdefault(fk, []).append(exit_node)
+
+                # Extract dimensions from inner module
+                inner = getattr(td_module, "module", None)
+                if inner is not None:
+                    first_lin = self._get_first_linear(inner)
+                    last_lin = self._get_last_linear(inner)
+                    if len(td_module.in_keys) == 1 and first_lin:
+                        fk = _format_key(td_module.in_keys[0])
+                        key_dims.setdefault(fk, first_lin.in_features)
+                    if len(td_module.out_keys) == 1 and last_lin:
+                        fk = _format_key(td_module.out_keys[0])
+                        key_dims[fk] = last_lin.out_features
 
             # Second pass: create single key nodes, preserving insertion order
             all_keys = list(dict.fromkeys(
@@ -275,9 +289,12 @@ class ModelVisualizer:
                 else:
                     fillcolor = T["key_input"]
 
+                dim = key_dims.get(key)
+                label = f"{key} [{dim}]" if dim is not None else key
+
                 key_node_id = f"key_{key}"
                 self.backend.create_node(
-                    key_node_id, key,
+                    key_node_id, label,
                     shape="ellipse", style="filled",
                     fillcolor=fillcolor,
                     fontcolor=T["key_text"],
@@ -295,7 +312,7 @@ class ModelVisualizer:
                         color=T["edge_key"], penwidth="1.5")
 
     def _visualize_generic_module(self, model):
-        T = DARK_THEME
+        T = THEME
         self.backend.set_graph_attr(
             rankdir="TB", splines="ortho",
             bgcolor=T["bg"], fontname=T["font"], fontcolor=T["module_text"],
@@ -310,7 +327,7 @@ class ModelVisualizer:
             with self.backend.subgraph(name="cluster_generic_module_internal",
                                        label="Layers", style="filled",
                                        color=T["cluster_border"],
-                                       fillcolor="#0d1b2a",
+                                       fillcolor=T["cluster_inner_fill"],
                                        fontname=T["font"],
                                        fontcolor=T["module_text"]):
                 first_internal_node, last_internal_node = self._visualize_module(
@@ -336,6 +353,19 @@ class ModelVisualizer:
                                      color=T["edge_key"], penwidth="1.5")
             self.backend.create_edge(last_internal_node, "output",
                                      color=T["edge_key"], penwidth="1.5")
+
+    def _get_first_linear(self, module):
+        for child in module.modules():
+            if isinstance(child, nn.Linear):
+                return child
+        return None
+
+    def _get_last_linear(self, module):
+        last = None
+        for child in module.modules():
+            if isinstance(child, nn.Linear):
+                last = child
+        return last
 
     def _get_layer_label(self, layer):
         if isinstance(layer, nn.Linear):

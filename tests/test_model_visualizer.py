@@ -498,7 +498,7 @@ class TestSingleKeyNodes:
 
         src = _source(viz)
         assert "key_obs" in src
-        assert "#2d6a4f" in src
+        assert "#d4edda" in src
 
     def test_output_only_key_colored_blue(self):
         net = nn.Sequential(nn.Linear(4, 2))
@@ -508,7 +508,7 @@ class TestSingleKeyNodes:
 
         src = _source(viz)
         assert "key_act" in src
-        assert "#1a5276" in src
+        assert "#d1ecf1" in src
 
     def test_intermediate_key_colored_amber(self):
         m1 = nn.Sequential(nn.Linear(4, 8))
@@ -521,7 +521,7 @@ class TestSingleKeyNodes:
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "#b8860b" in src
+        assert "#e8daef" in src
 
     def test_shared_input_key_connects_to_both_modules(self):
         m1 = nn.Sequential(nn.Linear(4, 2))
@@ -538,31 +538,31 @@ class TestSingleKeyNodes:
 
 
 # ---------------------------------------------------------------------------
-# Dark theme applied to all paths
+# Theme applied to all paths
 # ---------------------------------------------------------------------------
 
-class TestDarkTheme:
-    def test_sequential_has_dark_bg(self):
+class TestTheme:
+    def test_sequential_has_white_bg(self):
         model = nn.Sequential(nn.Linear(4, 2))
         viz = ModelVisualizer(model=model)
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "#1a1a2e" in src  # dark background
+        assert "white" in src
 
-    def test_generic_module_has_dark_bg(self):
+    def test_generic_module_has_white_bg(self):
         model = nn.Linear(3, 1)
         viz = ModelVisualizer(model=model)
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "#1a1a2e" in src
+        assert "white" in src
 
-    def test_td_sequential_has_dark_bg(self):
+    def test_td_sequential_has_white_bg(self):
         net = nn.Sequential(nn.Linear(4, 2))
         model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
         viz = ModelVisualizer(model=model)
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "#1a1a2e" in src
+        assert "white" in src

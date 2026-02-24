@@ -305,8 +305,8 @@ class TestProbabilisticModule:
         viz.visualize(render=False)
 
         src = _source(viz)
-        # param_mod should show its internal layers
-        assert "In: 4" in src
+        # param_mod should show its layer summary in compact mode
+        assert "Linear(4" in src
         # prob_mod should show its class name (no .module)
         assert "ProbabilisticTensorDictModule" in src
         assert "loc" in src

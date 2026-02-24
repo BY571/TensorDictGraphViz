@@ -80,18 +80,35 @@ class ModelVisualizer:
             self.backend.render("model_visualization")
 
     def _visualize_sequential(self, model):
+        T = DARK_THEME
+        self.backend.set_graph_attr(
+            rankdir="TB", bgcolor=T["bg"],
+            fontname=T["font"], fontcolor=T["module_text"],
+        )
+
         prev_node = "input"
-        self.backend.create_node(prev_node, "Input", shape="ellipse")
+        self.backend.create_node(prev_node, "Input", shape="ellipse",
+                                 style="filled", fillcolor=T["key_input"],
+                                 fontcolor=T["key_text"], fontname=T["font"])
 
         for i, layer in enumerate(model):
             layer_name = f"layer_{i}"
             label = self._get_layer_label(layer)
-            self.backend.create_node(layer_name, label)
-            self.backend.create_edge(prev_node, layer_name)
+            self.backend.create_node(layer_name, label, shape="box",
+                                     style="filled,rounded",
+                                     fillcolor=T["module_fill"],
+                                     color=T["module_border"],
+                                     fontcolor=T["module_text"],
+                                     fontname=T["font"])
+            self.backend.create_edge(prev_node, layer_name,
+                                     color=T["edge_internal"])
             prev_node = layer_name
 
-        self.backend.create_node("output", "Output", shape="ellipse")
-        self.backend.create_edge(prev_node, "output")
+        self.backend.create_node("output", "Output", shape="ellipse",
+                                 style="filled", fillcolor=T["key_output"],
+                                 fontcolor=T["key_text"], fontname=T["font"])
+        self.backend.create_edge(prev_node, "output",
+                                 color=T["edge_internal"])
 
     def _visualize_module(self, model, parent_name):
         T = DARK_THEME
@@ -278,34 +295,47 @@ class ModelVisualizer:
                         color=T["edge_key"], penwidth="1.5")
 
     def _visualize_generic_module(self, model):
-        self.backend.set_graph_attr(rankdir="TB", splines="ortho")
+        T = DARK_THEME
+        self.backend.set_graph_attr(
+            rankdir="TB", splines="ortho",
+            bgcolor=T["bg"], fontname=T["font"], fontcolor=T["module_text"],
+        )
 
         with self.backend.subgraph(name="cluster_generic_module",
-                                   label="Generic Module", style="filled",
-                                   color="white"):
-            # Internal module subgraph
+                                   label="Module", style="filled",
+                                   color=T["cluster_border"],
+                                   fillcolor=T["cluster_fill"],
+                                   fontname=T["font"],
+                                   fontcolor=T["module_text"]):
             with self.backend.subgraph(name="cluster_generic_module_internal",
-                                       label="Internal Module", style="filled",
-                                       color="white"):
+                                       label="Layers", style="filled",
+                                       color=T["cluster_border"],
+                                       fillcolor="#0d1b2a",
+                                       fontname=T["font"],
+                                       fontcolor=T["module_text"]):
                 first_internal_node, last_internal_node = self._visualize_module(
                     model, "generic_module")
 
                 if first_internal_node is None:
                     dummy_name = "generic_module_internal_dummy"
-                    self.backend.create_node(dummy_name, "Empty Module", shape="box")
+                    self.backend.create_node(dummy_name, "Empty Module",
+                                             shape="box", style="filled,rounded",
+                                             fillcolor=T["module_fill"],
+                                             fontcolor=T["module_text"],
+                                             fontname=T["font"])
                     first_internal_node = last_internal_node = dummy_name
 
-            # Input and output nodes
-            self.backend.create_node("input", "Input", shape="box",
-                                     style="filled", fillcolor="lightblue")
-            self.backend.create_node("output", "Output", shape="box",
-                                     style="filled", fillcolor="lightblue")
+            self.backend.create_node("input", "Input", shape="ellipse",
+                                     style="filled", fillcolor=T["key_input"],
+                                     fontcolor=T["key_text"], fontname=T["font"])
+            self.backend.create_node("output", "Output", shape="ellipse",
+                                     style="filled", fillcolor=T["key_output"],
+                                     fontcolor=T["key_text"], fontname=T["font"])
 
-            # Connect nodes
-            self.backend.create_edge("input", first_internal_node, style="dotted",
-                                     color="lightblue", penwidth="0.5")
-            self.backend.create_edge(last_internal_node, "output", style="dotted",
-                                     color="lightblue", penwidth="0.5")
+            self.backend.create_edge("input", first_internal_node,
+                                     color=T["edge_key"], penwidth="1.5")
+            self.backend.create_edge(last_internal_node, "output",
+                                     color=T["edge_key"], penwidth="1.5")
 
     def _get_layer_label(self, layer):
         if isinstance(layer, nn.Linear):

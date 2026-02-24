@@ -535,3 +535,34 @@ class TestSingleKeyNodes:
 
         src = _source(viz)
         assert "key_latent" in src
+
+
+# ---------------------------------------------------------------------------
+# Dark theme applied to all paths
+# ---------------------------------------------------------------------------
+
+class TestDarkTheme:
+    def test_sequential_has_dark_bg(self):
+        model = nn.Sequential(nn.Linear(4, 2))
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "#1a1a2e" in src  # dark background
+
+    def test_generic_module_has_dark_bg(self):
+        model = nn.Linear(3, 1)
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "#1a1a2e" in src
+
+    def test_td_sequential_has_dark_bg(self):
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        src = _source(viz)
+        assert "#1a1a2e" in src

@@ -1,6 +1,6 @@
 # tensordictviz
 
-Visualize neural network architectures built with TorchRL's `TensorDictModule` and `TensorDictSequential`. Renders graph diagrams showing each module's input/output keys, internal layers, and tensor dimensions.
+Visualize neural network architectures built with [TorchRL](https://github.com/pytorch/rl)'s `TensorDictModule` and `TensorDictSequential` (powered by [TensorDict](https://github.com/pytorch/tensordict)). Renders graph diagrams showing each module's input/output keys, internal layers, and tensor dimensions.
 
 TorchRL wires modules together by matching output keys to input keys — a dataflow graph — but `print(model)` buries this structure in nested text. tensordictviz makes the data flow explicit.
 

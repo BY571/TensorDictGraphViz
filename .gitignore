@@ -4,3 +4,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.vscode/
+.pytest_cache/
+*.gv
+*.gv.pdf
+*.ipynb

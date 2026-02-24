@@ -328,3 +328,38 @@ class TestClear:
         viz.clear()
         # After clear the graph body should be empty
         assert "Linear" not in _source(viz)
+
+
+# ---------------------------------------------------------------------------
+# Backend subgraph stack integrity
+# ---------------------------------------------------------------------------
+
+class TestSubgraphStack:
+    def test_stack_returns_to_root_after_visualize(self):
+        """After visualize(), the backend stack should be back at the root graph."""
+        net = nn.Sequential(nn.Linear(4, 2))
+        model = TensorDictModule(net, in_keys=["obs"], out_keys=["act"])
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        # Stack should contain only the root graph
+        assert len(viz.backend._stack) == 1
+        assert viz.backend._stack[0] is viz.backend.graph
+
+    def test_stack_returns_to_root_after_generic_module(self):
+        """Stack integrity for the generic module path."""
+        model = nn.Linear(3, 1)
+        viz = ModelVisualizer(model=model)
+        viz.visualize(render=False)
+
+        assert len(viz.backend._stack) == 1
+        assert viz.backend._stack[0] is viz.backend.graph
+
+    def test_clear_resets_stack(self):
+        """clear() should reset the stack to [root graph]."""
+        viz = ModelVisualizer(model=nn.Sequential(nn.Linear(4, 2)))
+        viz.visualize(render=False)
+        viz.clear()
+
+        assert len(viz.backend._stack) == 1
+        assert viz.backend._stack[0] is viz.backend.graph

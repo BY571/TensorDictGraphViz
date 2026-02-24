@@ -47,7 +47,7 @@ uv run pytest
 | ~~**P0**~~ | ~~Fix nested key crash~~ — Done: added `_format_key`/`_format_keys`/`_join_keys` helpers | ~~Small~~ |
 | ~~**P0**~~ | ~~Fix `ProbabilisticTensorDictModule` crash~~ — Done: guarded `.module` access with `getattr` | ~~Small~~ |
 | ~~**P1**~~ | ~~Add basic tests~~ — Done: 30 tests in `tests/test_model_visualizer.py` (3 viz paths, nested keys, ProbabilisticTDM, error handling, helpers) | ~~Medium~~ |
-| **P2** | Fix backend abstraction leak — `_visualize_td_sequential` bypasses backend interface, calls `self.backend.graph` directly | Medium |
+| ~~**P2**~~ | ~~Fix backend abstraction leak~~ — Done: added `set_graph_attr`/`subgraph` context manager to ABC; `GraphvizBackend` uses stack-based scoping; visualizer no longer touches `self.backend.graph` | ~~Medium~~ |
 | **P2** | Support nested `TensorDictSequential` (recursive visualization) | Medium |
 | **P3** | Improve graph aesthetics (cluster rank alignment, arrow routing, final output keys) | Medium |
 | **P3** | Clean up Excalidraw backend stub or remove it | Small |

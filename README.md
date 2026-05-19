@@ -1,8 +1,10 @@
 # tensordictviz
 
-Visualize neural network architectures built with [TorchRL](https://github.com/pytorch/rl)'s `TensorDictModule` and `TensorDictSequential` (powered by [TensorDict](https://github.com/pytorch/tensordict)). Renders graph diagrams showing each module's input/output keys, internal layers, and tensor dimensions.
+Visualize neural network architectures built with [TorchRL](https://github.com/pytorch/rl)'s `TensorDictModule` / `TensorDictSequential` (powered by [TensorDict](https://github.com/pytorch/tensordict)). Renders graph diagrams that show **real** tensor shapes at every key, every module's layer chain, and how data flows between modules.
 
-TorchRL wires modules together by matching output keys to input keys — a dataflow graph — but `print(model)` buries this structure in nested text. tensordictviz makes the data flow explicit.
+`print(model)` buries the key-plumbing in nested text. tensordictviz makes it explicit: which modules share inputs, which produce intermediate keys, where the recurrent state loops back.
+
+![Fan-out](./imgs/fan_out.png)
 
 ## Installation
 
@@ -10,161 +12,186 @@ TorchRL wires modules together by matching output keys to input keys — a dataf
 pip install tensordictviz
 ```
 
-Requires [Graphviz](https://graphviz.org/download/) to be installed on your system.
+Requires [Graphviz](https://graphviz.org/download/) installed on your system.
 
-## Quick Start
+## Quick start
 
 ```python
-from tensordictviz import ModelVisualizer
+from tensordictviz import visualize
 from torch import nn
 from tensordict.nn import TensorDictModule, TensorDictSequential
 
 encoder = nn.Sequential(nn.Linear(4, 5), nn.ReLU(), nn.Linear(5, 3))
-head_a = nn.Sequential(nn.Linear(3, 2), nn.ReLU(), nn.Linear(2, 1))
-head_b = nn.Sequential(nn.Linear(3, 6), nn.ReLU(), nn.Linear(6, 3))
+head_a  = nn.Sequential(nn.Linear(3, 2), nn.ReLU(), nn.Linear(2, 1))
+head_b  = nn.Sequential(nn.Linear(3, 6), nn.ReLU(), nn.Linear(6, 3))
 
 model = TensorDictSequential(
     TensorDictModule(encoder, in_keys=["observation"], out_keys=["latent"]),
-    TensorDictModule(head_a, in_keys=["latent"], out_keys=["action"]),
-    TensorDictModule(head_b, in_keys=["latent"], out_keys=["value"]),
+    TensorDictModule(head_a,  in_keys=["latent"],      out_keys=["action"]),
+    TensorDictModule(head_b,  in_keys=["latent"],      out_keys=["value"]),
 )
 
-viz = ModelVisualizer(model=model)
-viz.visualize()  # renders and saves as SVG
-viz.view()       # opens in default viewer
+viz = visualize(model)        # captures real shapes via a fake forward pass
+viz.view()                    # open in default SVG viewer
+viz.save("policy", "png")     # save to disk
 ```
 
-![Fan-out: 1 input, 2 output heads](./imgs/fan_out.png)
+In a Jupyter notebook, just `visualize(model)` auto-renders inline thanks to `_repr_svg_`.
 
-Key nodes show tensor dimensions and are color-coded by role:
-- **Green** — input keys (consumed but not produced)
-- **Lavender** — intermediate keys (produced and consumed)
-- **Blue** — output keys (produced but not consumed)
+## What you get
 
-## Detail Modes
+- **Real tensor shapes** at every key, captured by running a fake forward pass through the model.
+- **Color-coded key nodes** (green = input, lavender = intermediate, blue = output, yellow-dashed = recurrent state).
+- **Layer-chain summaries** for each module: `Linear(4→5) → ReLU → Linear(5→3)`.
+- **TorchRL-aware rendering** for `ProbabilisticTensorDictModule`, recurrent modules, and any `TensorDictSequential` subclass.
+- **Themes**: `"light"` (default), `"dark"`, `"print"` — or pass a dict for partial overrides.
+- **On-diagram legend** explaining the colour code (toggle with `show_legend=False`).
+- **20+ layer types** in the registry — Linear, Conv1d/2d/3d, ConvTranspose, BatchNorm, LayerNorm, GroupNorm, Pool, AdaptivePool, Embedding, LSTM/GRU/RNN, MultiheadAttention, Transformer*, Flatten, Dropout, activations. Extend via `@register_layer`.
 
-### Compact (default)
+## Examples
 
-Each module is a single box with a layer summary chain:
-
-```python
-viz = ModelVisualizer(model=model)
-viz.visualize(detail="compact")
-```
-
-![Compact mode](./imgs/fan_out.png)
-
-### Full
-
-Modules expand into clusters showing individual layers:
+### Probabilistic actor
 
 ```python
-viz = ModelVisualizer(model=model)
-viz.visualize(detail="full")
-```
+from tensordict.nn import ProbabilisticTensorDictModule
+from tensordict.nn.distributions import NormalParamExtractor
+from torch.distributions import Normal
 
-![Full detail mode](./imgs/fan_out_full.png)
-
-## Architecture Examples
-
-### Fan-in: multiple inputs merging
-
-Two input streams (image + text) embedding into a shared space, then fused into a single output.
-
-```python
-model = TensorDictSequential(
-    TensorDictModule(embed_img, in_keys=["image"], out_keys=["image_emb"]),
-    TensorDictModule(embed_text, in_keys=["text"], out_keys=["text_emb"]),
-    TensorDictModule(fuse, in_keys=["image_emb"], out_keys=["action"]),
+net = nn.Sequential(nn.Linear(4, 16), nn.ReLU(), nn.Linear(16, 4), NormalParamExtractor())
+param_mod = TensorDictModule(net, in_keys=["observation"], out_keys=["loc", "scale"])
+prob_mod = ProbabilisticTensorDictModule(
+    in_keys=["loc", "scale"], out_keys=["action"], distribution_class=Normal,
 )
+actor = TensorDictSequential(param_mod, prob_mod)
+visualize(actor)
 ```
 
-![Fan-in](./imgs/fan_in.png)
+![Probabilistic actor](./imgs/probabilistic_actor.png)
 
-### CNN + MLP
+The probabilistic module is highlighted in red with the distribution class and the (in → out) mapping spelled out.
 
-Conv2d feature extractor feeding into a linear head:
+### Recurrent state (LSTM/GRU)
+
+A key that appears in both `in_keys` and `out_keys` of the same module is rendered as a yellow-dashed **recurrent state**:
+
+![Stateful module](./imgs/stateful.png)
+
+### CNN → MLP with real shapes
 
 ```python
 cnn = nn.Sequential(
-    nn.Conv2d(3, 16, kernel_size=3, padding=1), nn.ReLU(),
-    nn.Conv2d(16, 32, kernel_size=3, padding=1), nn.ReLU(),
+    nn.Conv2d(3, 16, 3, padding=1), nn.ReLU(),
+    nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(),
+    nn.AdaptiveAvgPool2d(1), nn.Flatten(),
 )
 mlp = nn.Sequential(nn.Linear(32, 16), nn.ReLU(), nn.Linear(16, 4))
 
 model = TensorDictSequential(
-    TensorDictModule(cnn, in_keys=["pixels"], out_keys=["features"]),
+    TensorDictModule(cnn, in_keys=["pixels"],  out_keys=["features"]),
     TensorDictModule(mlp, in_keys=["features"], out_keys=["action"]),
 )
+visualize(model)
 ```
 
 ![CNN + MLP](./imgs/cnn.png)
 
-### Deep chain
+The pixel input is correctly shown as `[3, 32, 32]` (CHW), features as `[32]` after the pool/flatten, and action as `[4]`. Shapes come from a real forward pass — no manual annotation needed.
 
-Four modules in series with dropout:
+### Token embedding pipeline
 
-![Deep chain](./imgs/deep_chain.png)
+![Embedding](./imgs/embedding.png)
+
+`Embedding(100, 16)` is recognised by the layer registry; the inferred shape correctly shows the sequence dim.
 
 ### Diamond topology
 
-Fan-out from a shared hidden state, then partial fan-in:
-
 ![Diamond](./imgs/diamond.png)
+
+### Fan-in: two streams fused
+
+![Fan-in](./imgs/fan_in.png)
+
+### Deep chain
+
+![Deep chain](./imgs/deep_chain.png)
 
 ### Nested keys
 
-Tuple keys like `("agents", "observation")` render as dot-separated names:
-
 ```python
 model = TensorDictSequential(
-    TensorDictModule(net1, in_keys=[("agents", "observation")], out_keys=[("agents", "hidden")]),
-    TensorDictModule(net2, in_keys=[("agents", "hidden")], out_keys=[("agents", "action")]),
+    TensorDictModule(net, in_keys=[("agents", "observation")], out_keys=[("agents", "hidden")]),
+    TensorDictModule(net, in_keys=[("agents", "hidden")],      out_keys=[("agents", "action")]),
 )
 ```
 
 ![Nested keys](./imgs/nested_keys.png)
 
-### Single TDModule
+### Themes
 
-Works with a standalone `TensorDictModule` too:
+```python
+visualize(model, theme="dark")
+visualize(model, theme="print")           # monochrome, print-friendly
+visualize(model, theme={"bg": "#fffaf0"}) # partial override on top of "light"
+```
 
-![Single TDModule](./imgs/single_td.png)
+| Dark | Print |
+|---|---|
+| ![dark](./imgs/fan_out_dark.png) | ![print](./imgs/fan_out_print.png) |
 
-### Plain nn.Sequential
+### Detail modes
 
-Also supports standard PyTorch `nn.Sequential` (no TensorDict keys):
+```python
+visualize(model, detail="compact")  # default — one box per module
+visualize(model, detail="full")     # expand modules into individual layers
+```
 
-![Plain Sequential](./imgs/plain_sequential.png)
+![Full detail](./imgs/fan_out_full.png)
 
 ## API
 
 ```python
-viz = ModelVisualizer(model=model, backend="graphviz")
+from tensordictviz import visualize, ModelVisualizer, register_layer
 
-viz.visualize(
-    render=True,       # save to file (default: True)
-    detail="compact",  # "compact" or "full"
+# Convenience
+viz = visualize(
+    model,
+    detail="compact",            # or "full"
+    theme="light",               # "light" | "dark" | "print" | dict override
+    sample_input=my_td_or_dict,  # use a real input for shape inference instead of the synthesized fake
+    show_legend=True,
+    render=False,                # write to disk
 )
 
-viz.view(wait=False)   # open in system viewer
-viz.clear()            # reset for reuse
+# Same as above, but explicit
+viz = ModelVisualizer(model=model)
+viz.visualize(detail="compact", theme="dark")
+viz.view()
+viz.save("model", format="svg")
+viz.key_shapes  # {"observation": (2, 4), "latent": (2, 3), ...}
+
+# Custom layer formatter
+@register_layer(MyLayer)
+def _fmt(layer):
+    return (
+        f"MyLayer\nfoo: {layer.foo}",   # multi-line label (detail='full')
+        f"MyLayer({layer.foo})",         # one-liner (detail='compact')
+    )
 ```
 
-## Supported Model Types
+## Supported model types
 
-| Type | Visualization |
-|------|---------------|
+| Type | Output |
+|------|--------|
 | `TensorDictSequential` | Dataflow graph with key nodes and module boxes |
-| `TensorDictModule` | Same as above, single module |
+| `TensorDictModule` | Single module, same key-node treatment |
 | `nn.Sequential` | Linear chain: Input → layers → Output |
-| `nn.Module` | Generic module with layer cluster |
+| `nn.Module` | Generic module with a layer cluster |
 
-## Gallery Script
+## Gallery
 
-Run the full gallery of test architectures:
+Run the full gallery (16 examples covering every feature):
 
 ```bash
-python examples/gallery.py         # render all to /tmp/tviz_gallery/
-python examples/gallery.py --open  # render and open in viewer
+python examples/gallery.py            # → /tmp/tviz_gallery/
+python examples/gallery.py --open     # also xdg-open each one
 ```

@@ -38,7 +38,11 @@ class GraphvizBackend(VisualizationBackend):
         self.graph.render(filename, format=format, cleanup=True)
         print(f"Graph saved as {filename}.{format}")
 
-    def view(self, wait=False):
+    def render_svg_string(self) -> str:
+        """Pipe the current graph through graphviz to an SVG string in memory."""
+        return self.graph.pipe(format="svg").decode("utf-8")
+
+    def view(self, wait: bool = False):
         self.graph.view(cleanup=True, quiet=True, quiet_view=True)
         if wait:
             input("Press Enter to continue...")

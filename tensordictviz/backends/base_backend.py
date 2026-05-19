@@ -1,7 +1,12 @@
-# tensordictviz/backends/base_backend.py
+"""Backend abstract base class.
+
+A backend produces a graph in some output format (Graphviz, HTML, ...).
+The visualizer is backend-agnostic: it calls ``create_node``, ``create_edge``,
+``subgraph`` (as a context manager), and ``set_graph_attr`` against the
+current scope.
+"""
 
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
 
 
 class VisualizationBackend(ABC):
@@ -16,19 +21,21 @@ class VisualizationBackend(ABC):
     @abstractmethod
     def set_graph_attr(self, **attrs):
         """Set attributes on the current graph/subgraph scope."""
-        pass
 
     @abstractmethod
     def subgraph(self, name: str, **attrs):
         """Context manager that scopes create_node/create_edge to a new subgraph."""
-        pass
 
     @abstractmethod
     def render(self, filename: str, format: str = "svg"):
         pass
 
     @abstractmethod
-    def view(self):
+    def render_svg_string(self) -> str:
+        """Return the current graph as an in-memory SVG string (for Jupyter)."""
+
+    @abstractmethod
+    def view(self, wait: bool = False):
         pass
 
     @abstractmethod

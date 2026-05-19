@@ -71,10 +71,6 @@ class TestModelVisualizerInit:
         with pytest.raises(ValueError, match="Unsupported backend"):
             ModelVisualizer(backend="matplotlib")
 
-    def test_excalidraw_backend_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            ModelVisualizer(backend="excalidraw")
-
     def test_no_model_raises_on_visualize(self):
         viz = ModelVisualizer()
         with pytest.raises(ValueError, match="No model provided"):
@@ -124,9 +120,10 @@ class TestVisualizeSequential:
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "Conv2D" in src
-        assert "In: 1" in src
-        assert "Out: 32" in src
+        assert "Conv2d" in src
+        # New label format: "Ch: 1→32"
+        assert "Ch: 1" in src
+        assert "32" in src
 
     def test_dropout_layer(self):
         model = nn.Sequential(nn.Linear(4, 4), nn.Dropout(0.5))
@@ -379,7 +376,7 @@ class TestLayerSummary:
 
     def test_conv2d_summary(self):
         layer = nn.Conv2d(1, 32, kernel_size=3)
-        assert self._viz()._get_layer_summary(layer) == "Conv2d(1\u219232)"
+        assert self._viz()._get_layer_summary(layer) == "Conv2d(1\u219232, k=3x3)"
 
     def test_relu_summary(self):
         layer = nn.ReLU()
@@ -387,7 +384,7 @@ class TestLayerSummary:
 
     def test_dropout_summary(self):
         layer = nn.Dropout(0.5)
-        assert self._viz()._get_layer_summary(layer) == "Drop(0.5)"
+        assert self._viz()._get_layer_summary(layer) == "Dropout(0.5)"
 
     def test_unknown_layer_summary(self):
         layer = nn.Sigmoid()

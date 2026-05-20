@@ -220,9 +220,12 @@ files.append(render(stateful, "12_stateful"))
 files.append(render(attn_demo, "13_attention"))
 files.append(render(lstm_seq, "14_lstm"))
 
-# Theme showcase on the fan_out model.
-files.append(render(fan_out, "15_fan_out_dark", theme="dark"))
-files.append(render(fan_out, "16_fan_out_print", theme="print"))
+# Theme showcase: the same model rendered in every preset.
+files.append(render(fan_out, "15_theme_dark", theme="dark"))
+files.append(render(fan_out, "16_theme_print", theme="print"))
+files.append(render(fan_out, "17_theme_blueprint", theme="blueprint"))
+files.append(render(fan_out, "18_theme_editorial", theme="editorial"))
+files.append(render(fan_out, "19_theme_vivid", theme="vivid"))
 
 print(f"\nDone! {len(files)} images in {OUTPUT_DIR}/")
 

@@ -14,7 +14,7 @@ tensordictviz/
 ├── model_visualizer.py      # Core dispatch + per-path visualization + top-level visualize()
 ├── shape_inference.py       # ShapeInferer — fake forward pass, captures shape per key
 ├── layer_registry.py        # 20+ default layer formatters + @register_layer for extensions
-├── themes.py                # "light" / "dark" / "print" presets + dict overrides
+├── themes.py                # 6 presets (light/dark/print/blueprint/editorial/vivid) + structural keys
 └── backends/
     ├── __init__.py
     ├── base_backend.py      # VisualizationBackend ABC (+ render_svg_string)

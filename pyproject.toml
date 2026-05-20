@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tensordictviz"
-version = "0.2.0"
+version = "0.3.0"
 description = "Visualize neural network architectures built with TorchRL's TensorDictModule"
 readme = "README.md"
 requires-python = ">=3.11"

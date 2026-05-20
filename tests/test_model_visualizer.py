@@ -4,7 +4,7 @@ from tensordict.nn import TensorDictModule, TensorDictSequential
 from tensordict.nn import ProbabilisticTensorDictModule
 from torch.distributions import Normal
 
-from tensordictviz import ModelVisualizer
+from tensordictviz import ModelVisualizer, THEMES
 from tensordictviz.model_visualizer import _format_key, _format_keys, _join_keys
 
 
@@ -495,7 +495,7 @@ class TestSingleKeyNodes:
 
         src = _source(viz)
         assert "key_obs" in src
-        assert "#d4edda" in src
+        assert THEMES["light"]["key_input"] in src
 
     def test_output_only_key_colored_blue(self):
         net = nn.Sequential(nn.Linear(4, 2))
@@ -505,7 +505,7 @@ class TestSingleKeyNodes:
 
         src = _source(viz)
         assert "key_act" in src
-        assert "#d1ecf1" in src
+        assert THEMES["light"]["key_output"] in src
 
     def test_intermediate_key_colored_amber(self):
         m1 = nn.Sequential(nn.Linear(4, 8))
@@ -518,7 +518,7 @@ class TestSingleKeyNodes:
         viz.visualize(render=False)
 
         src = _source(viz)
-        assert "#e8daef" in src
+        assert THEMES["light"]["key_intermediate"] in src
 
     def test_shared_input_key_connects_to_both_modules(self):
         m1 = nn.Sequential(nn.Linear(4, 2))

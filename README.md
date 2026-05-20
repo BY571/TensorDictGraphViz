@@ -44,7 +44,7 @@ In a Jupyter notebook, just `visualize(model)` auto-renders inline thanks to `_r
 - **Color-coded key nodes** (green = input, lavender = intermediate, blue = output, yellow-dashed = recurrent state).
 - **Layer-chain summaries** for each module: `Linear(4→5) → ReLU → Linear(5→3)`.
 - **TorchRL-aware rendering** for `ProbabilisticTensorDictModule`, recurrent modules, and any `TensorDictSequential` subclass.
-- **Themes**: `"light"` (default), `"dark"`, `"print"` — or pass a dict for partial overrides.
+- **Six themes**: `light`, `dark`, `print`, `blueprint`, `editorial`, `vivid` — or pass a dict to override colours *and* structure (shapes, corners, layout).
 - **On-diagram legend** explaining the colour code (toggle with `show_legend=False`).
 - **20+ layer types** in the registry — Linear, Conv1d/2d/3d, ConvTranspose, BatchNorm, LayerNorm, GroupNorm, Pool, AdaptivePool, Embedding, LSTM/GRU/RNN, MultiheadAttention, Transformer*, Flatten, Dropout, activations. Extend via `@register_layer`.
 
@@ -128,15 +128,30 @@ model = TensorDictSequential(
 
 ### Themes
 
+Six presets ship in the box. A theme controls colours *and* structure — node
+shapes, corner style, edge routing, layout direction, spacing.
+
 ```python
-visualize(model, theme="dark")
-visualize(model, theme="print")           # monochrome, print-friendly
-visualize(model, theme={"bg": "#fffaf0"}) # partial override on top of "light"
+visualize(model, theme="blueprint")
+visualize(model, theme="editorial")
+visualize(model, theme="vivid")
+visualize(model, theme={"bg": "#fffaf0"})         # partial colour override
+visualize(model, theme={"module_rounded": False}) # partial structure override
 ```
 
-| Dark | Print |
-|---|---|
-| ![dark](./imgs/fan_out_dark.png) | ![print](./imgs/fan_out_print.png) |
+| `light` (default) | `dark` | `print` |
+|---|---|---|
+| ![light](./imgs/fan_out.png) | ![dark](./imgs/fan_out_dark.png) | ![print](./imgs/fan_out_print.png) |
+
+| `blueprint` | `editorial` | `vivid` |
+|---|---|---|
+| ![blueprint](./imgs/fan_out_blueprint.png) | ![editorial](./imgs/fan_out_editorial.png) | ![vivid](./imgs/fan_out_vivid.png) |
+
+- **`blueprint`** — navy engineering-drawing look: cyan line-art, monospace, sharp corners, box-shaped keys.
+- **`editorial`** — minimal near-monochrome with a single indigo accent and generous whitespace.
+- **`vivid`** — bold flat saturated fills with strong matching borders.
+
+A theme dict accepts structural keys too: `rankdir`, `splines`, `key_shape`, `module_shape`, `module_rounded`, `nodesep`, `ranksep`.
 
 ### Detail modes
 
@@ -156,7 +171,7 @@ from tensordictviz import visualize, ModelVisualizer, register_layer
 viz = visualize(
     model,
     detail="compact",            # or "full"
-    theme="light",               # "light" | "dark" | "print" | dict override
+    theme="light",               # light|dark|print|blueprint|editorial|vivid, or dict
     sample_input=my_td_or_dict,  # use a real input for shape inference instead of the synthesized fake
     show_legend=True,
     render=False,                # write to disk

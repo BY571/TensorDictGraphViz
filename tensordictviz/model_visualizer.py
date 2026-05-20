@@ -241,21 +241,16 @@ class ModelVisualizer:
 
     def _visualize_sequential(self, model):
         T = self.theme
-        self.backend.set_graph_attr(
-            rankdir="TB",
-            bgcolor=T["bg"],
-            fontname=T["font"],
-            fontcolor=T["module_text"],
-        )
+        self._apply_graph_attrs()
 
         prev_node = "input"
         self.backend.create_node(
             prev_node,
             "Input",
-            shape="ellipse",
+            shape=T["key_shape"],
             style="filled",
             fillcolor=T["key_input"],
-            color=T["key_border"],
+            color=T["key_input_border"],
             fontcolor=T["key_text"],
             fontname=T["font"],
         )
@@ -265,8 +260,8 @@ class ModelVisualizer:
             self.backend.create_node(
                 layer_name,
                 _layer_label(layer),
-                shape="box",
-                style="filled,rounded",
+                shape=T["module_shape"],
+                style=self._module_style(),
                 fillcolor=T["module_fill"],
                 color=T["module_border"],
                 fontcolor=T["module_text"],
@@ -283,10 +278,10 @@ class ModelVisualizer:
         self.backend.create_node(
             "output",
             "Output",
-            shape="ellipse",
+            shape=T["key_shape"],
             style="filled",
             fillcolor=T["key_output"],
-            color=T["key_border"],
+            color=T["key_output_border"],
             fontcolor=T["key_text"],
             fontname=T["font"],
         )
@@ -301,13 +296,7 @@ class ModelVisualizer:
 
     def _visualize_td_sequential(self, model, detail: str = "compact"):
         T = self.theme
-        self.backend.set_graph_attr(
-            rankdir="TB",
-            splines="ortho",
-            bgcolor=T["bg"],
-            fontname=T["font"],
-            fontcolor=T["module_text"],
-        )
+        self._apply_graph_attrs()
 
         seq_label = type(model).__name__
 
@@ -380,8 +369,8 @@ class ModelVisualizer:
         self.backend.create_node(
             node_id,
             label,
-            shape="box",
-            style="filled,rounded",
+            shape=T["module_shape"],
+            style=self._module_style(),
             fillcolor=fillcolor,
             color=border,
             fontcolor=T["module_text"],
@@ -413,10 +402,10 @@ class ModelVisualizer:
             self.backend.create_node(
                 entry_node,
                 f"In: {in_keys}",
-                shape="box",
-                style="filled,rounded",
+                shape=T["module_shape"],
+                style=self._module_style(),
                 fillcolor=T["key_input"],
-                color=T["key_border"],
+                color=T["key_input_border"],
                 fontcolor=T["key_text"],
                 fontname=T["font"],
             )
@@ -438,8 +427,8 @@ class ModelVisualizer:
                     self.backend.create_node(
                         dummy,
                         self._probabilistic_summary(td_module),
-                        shape="box",
-                        style="filled,rounded",
+                        shape=T["module_shape"],
+                        style=self._module_style(),
                         fillcolor=T["probabilistic_fill"],
                         color=T["probabilistic_border"],
                         fontcolor=T["module_text"],
@@ -464,8 +453,8 @@ class ModelVisualizer:
                     self.backend.create_node(
                         dummy,
                         label,
-                        shape="box",
-                        style="filled,rounded",
+                        shape=T["module_shape"],
+                        style=self._module_style(),
                         fillcolor=T["module_fill"],
                         color=T["module_border"],
                         fontcolor=T["module_text"],
@@ -477,10 +466,10 @@ class ModelVisualizer:
             self.backend.create_node(
                 exit_node,
                 f"Out: {out_keys}",
-                shape="box",
-                style="filled,rounded",
+                shape=T["module_shape"],
+                style=self._module_style(),
                 fillcolor=T["key_output"],
-                color=T["key_border"],
+                color=T["key_output_border"],
                 fontcolor=T["key_text"],
                 fontname=T["font"],
             )
@@ -503,8 +492,8 @@ class ModelVisualizer:
             self.backend.create_node(
                 layer_name,
                 _layer_label(layer),
-                shape="box",
-                style="filled,rounded",
+                shape=T["module_shape"],
+                style=self._module_style(),
                 fillcolor=T["module_fill"],
                 color=T["module_border"],
                 fontcolor=T["module_text"],
@@ -527,19 +516,19 @@ class ModelVisualizer:
 
         if is_state:
             fillcolor = T["key_state"]
-            border_color = T["edge_state"]
+            border_color = T["key_state_border"]
             border_style = "dashed"
         elif is_produced and is_consumed:
             fillcolor = T["key_intermediate"]
-            border_color = T["key_border"]
+            border_color = T["key_intermediate_border"]
             border_style = "solid"
         elif is_produced:
             fillcolor = T["key_output"]
-            border_color = T["key_border"]
+            border_color = T["key_output_border"]
             border_style = "solid"
         else:
             fillcolor = T["key_input"]
-            border_color = T["key_border"]
+            border_color = T["key_input_border"]
             border_style = "solid"
 
         shape_str = _shape_label(self.key_shapes.get(key))
@@ -556,7 +545,7 @@ class ModelVisualizer:
         self.backend.create_node(
             key_node_id,
             label,
-            shape="ellipse",
+            shape=T["key_shape"],
             style=f"filled,{border_style}" if border_style != "solid" else "filled",
             fillcolor=fillcolor,
             color=border_color,
@@ -585,13 +574,7 @@ class ModelVisualizer:
 
     def _visualize_generic_module(self, model):
         T = self.theme
-        self.backend.set_graph_attr(
-            rankdir="TB",
-            splines="ortho",
-            bgcolor=T["bg"],
-            fontname=T["font"],
-            fontcolor=T["module_text"],
-        )
+        self._apply_graph_attrs()
 
         with self.backend.subgraph(
             name="cluster_generic_module",
@@ -619,8 +602,8 @@ class ModelVisualizer:
                     self.backend.create_node(
                         dummy,
                         "Empty Module",
-                        shape="box",
-                        style="filled,rounded",
+                        shape=T["module_shape"],
+                        style=self._module_style(),
                         fillcolor=T["module_fill"],
                         color=T["module_border"],
                         fontcolor=T["module_text"],
@@ -633,20 +616,20 @@ class ModelVisualizer:
             self.backend.create_node(
                 "input",
                 f"Input {in_shape}".rstrip() if in_shape else "Input",
-                shape="ellipse",
+                shape=T["key_shape"],
                 style="filled",
                 fillcolor=T["key_input"],
-                color=T["key_border"],
+                color=T["key_input_border"],
                 fontcolor=T["key_text"],
                 fontname=T["font"],
             )
             self.backend.create_node(
                 "output",
                 f"Output {out_shape}".rstrip() if out_shape else "Output",
-                shape="ellipse",
+                shape=T["key_shape"],
                 style="filled",
                 fillcolor=T["key_output"],
-                color=T["key_border"],
+                color=T["key_output_border"],
                 fontcolor=T["key_text"],
                 fontname=T["font"],
             )
@@ -664,37 +647,49 @@ class ModelVisualizer:
         with self.backend.subgraph(
             name="cluster_legend",
             label="Legend",
-            style="filled,rounded",
+            style=self._module_style(),
             color=T["legend_border"],
             fillcolor=T["legend_fill"],
             fontname=T["font"],
             fontcolor=T["module_text"],
             fontsize="10",
         ):
-            # Each entry: (node_id, label, fill, shape, style, fontcolor).
-            # The fontcolor varies because module fills are typically dark in
-            # the dark theme but key fills are bright — both need legible text.
+            # Each entry: (node_id, label, fill, border, shape, style, fontcolor).
+            # Shapes and borders track the theme so the legend always matches
+            # the graph it explains.
+            key_shape = T["key_shape"]
             entries = [
-                ("legend_input", "Input key", T["key_input"], "ellipse", "solid", T["key_text"]),
-                ("legend_inter", "Intermediate", T["key_intermediate"], "ellipse", "solid", T["key_text"]),
-                ("legend_output", "Output key", T["key_output"], "ellipse", "solid", T["key_text"]),
+                ("legend_input", "Input key", T["key_input"], T["key_input_border"],
+                 key_shape, "solid", T["key_text"]),
+                ("legend_inter", "Intermediate", T["key_intermediate"],
+                 T["key_intermediate_border"], key_shape, "solid", T["key_text"]),
+                ("legend_output", "Output key", T["key_output"], T["key_output_border"],
+                 key_shape, "solid", T["key_text"]),
             ]
             if include_state:
                 entries.append(
-                    ("legend_state", "Recurrent state", T["key_state"], "ellipse", "dashed", T["key_text"])
+                    ("legend_state", "Recurrent state", T["key_state"],
+                     T["key_state_border"], key_shape, "dashed", T["key_text"])
                 )
             entries.append(
-                ("legend_module", "Module", T["module_fill"], "box", "solid", T["module_text"])
+                ("legend_module", "Module", T["module_fill"], T["module_border"],
+                 T["module_shape"], "module", T["module_text"])
             )
 
-            for node_id, label, fill, shape, style, fontcolor in entries:
+            for node_id, label, fill, border, shape, style, fontcolor in entries:
+                if style == "module":
+                    node_style = self._module_style()
+                elif style == "dashed":
+                    node_style = "filled,dashed"
+                else:
+                    node_style = "filled"
                 self.backend.create_node(
                     node_id,
                     label,
                     shape=shape,
-                    style=f"filled,{style}" if style != "solid" else "filled",
+                    style=node_style,
                     fillcolor=fill,
-                    color=T["key_border"],
+                    color=border,
                     fontcolor=fontcolor,
                     fontname=T["font"],
                     fontsize="10",
@@ -705,6 +700,23 @@ class ModelVisualizer:
                 self.backend.create_edge(a[0], b[0], style="invis")
 
     # -- Helpers -----------------------------------------------------------
+
+    def _module_style(self) -> str:
+        """Module-node style string, honoring the theme's corner setting."""
+        return "filled,rounded" if self.theme.get("module_rounded", True) else "filled"
+
+    def _apply_graph_attrs(self):
+        """Set canvas + layout attributes from the active theme."""
+        T = self.theme
+        self.backend.set_graph_attr(
+            rankdir=T["rankdir"],
+            splines=T["splines"],
+            bgcolor=T["bg"],
+            fontname=T["font"],
+            fontcolor=T["module_text"],
+            nodesep=T["nodesep"],
+            ranksep=T["ranksep"],
+        )
 
     def _edge_shape_attrs(self, source_node: str) -> Dict[str, str]:
         """Edge attrs labelling an edge with the shape of the tensor leaving

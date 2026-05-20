@@ -54,8 +54,10 @@ class TestTopLevelVisualize:
 
 
 class TestThemes:
-    def test_three_presets_available(self):
-        assert set(THEMES.keys()) == {"light", "dark", "print"}
+    def test_six_presets_available(self):
+        assert set(THEMES.keys()) == {
+            "light", "dark", "print", "blueprint", "editorial", "vivid",
+        }
 
     def test_resolve_light_default(self):
         t = resolve_theme(None)
@@ -64,11 +66,44 @@ class TestThemes:
     def test_resolve_named(self):
         assert resolve_theme("dark")["bg"] == "#1e1e2e"
         assert resolve_theme("print")["bg"] == "white"
+        assert resolve_theme("blueprint")["bg"] == "#0d2137"
 
     def test_resolve_dict_overrides_light(self):
         t = resolve_theme({"bg": "#abcdef"})
         assert t["bg"] == "#abcdef"
         assert t["module_fill"] == THEMES["light"]["module_fill"]
+
+    def test_every_theme_resolves_to_complete_schema(self):
+        """Every preset, merged onto LIGHT, must define all schema keys."""
+        required = set(resolve_theme("light").keys())
+        for name in THEMES:
+            resolved = resolve_theme(name)
+            assert set(resolved.keys()) == required, f"{name} missing keys"
+
+    def test_structural_keys_present(self):
+        t = resolve_theme("blueprint")
+        for key in ("rankdir", "splines", "key_shape", "module_shape",
+                    "module_rounded", "nodesep", "ranksep"):
+            assert key in t
+
+    def test_blueprint_is_structurally_distinct(self):
+        t = resolve_theme("blueprint")
+        assert t["key_shape"] == "box"
+        assert t["module_rounded"] is False
+        assert t["font"] == "Courier New"
+
+    def test_partial_theme_inherits_structure(self):
+        """A dict override that only sets a color keeps LIGHT's structure."""
+        t = resolve_theme({"bg": "#000000"})
+        assert t["key_shape"] == "ellipse"
+        assert t["module_rounded"] is True
+
+    def test_module_rounded_override_changes_style(self):
+        model = nn.Sequential(nn.Linear(4, 2))
+        sharp = visualize(model, theme={"module_rounded": False})
+        assert "filled,rounded" not in _source(sharp)
+        rounded = visualize(model, theme={"module_rounded": True})
+        assert "rounded" in _source(rounded)
 
     def test_unknown_theme_raises(self):
         with pytest.raises(ValueError, match="Unknown theme"):

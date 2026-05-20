@@ -40,7 +40,7 @@ In a Jupyter notebook, just `visualize(model)` auto-renders inline thanks to `_r
 
 ## What you get
 
-- **Real tensor shapes** at every key, captured by running a fake forward pass through the model.
+- **Real tensor shapes** captured by a fake forward pass — on every key for TensorDict models, and on every edge (the running shape) for plain `nn.Sequential`.
 - **Color-coded key nodes** (green = input, lavender = intermediate, blue = output, yellow-dashed = recurrent state).
 - **Layer-chain summaries** for each module: `Linear(4→5) → ReLU → Linear(5→3)`.
 - **TorchRL-aware rendering** for `ProbabilisticTensorDictModule`, recurrent modules, and any `TensorDictSequential` subclass.

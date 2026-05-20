@@ -8,6 +8,7 @@ coverage, themes, and TorchRL-aware rendering.
 import os
 import sys
 
+import torch
 from tensordict.nn import (
     ProbabilisticTensorDictModule,
     TensorDictModule,
@@ -47,12 +48,26 @@ fan_out = TensorDictSequential(
 # --- 2. Fan-in: 2 inputs → 1 output -----------------------------------------
 embed_img = nn.Sequential(nn.Linear(64, 32), nn.ReLU())
 embed_text = nn.Sequential(nn.Linear(128, 32), nn.ReLU())
-fuse = nn.Sequential(nn.Linear(32, 16), nn.ReLU(), nn.Linear(16, 4))
+
+
+class Fuse(nn.Module):
+    """Concatenate the image and text embeddings, then project to an action."""
+
+    def __init__(self):
+        super().__init__()
+        self.proj = nn.Linear(64, 16)
+        self.act = nn.ReLU()
+        self.head = nn.Linear(16, 4)
+
+    def forward(self, image_emb, text_emb):
+        x = torch.cat([image_emb, text_emb], dim=-1)
+        return self.head(self.act(self.proj(x)))
+
 
 fan_in = TensorDictSequential(
     TensorDictModule(embed_img, in_keys=["image"], out_keys=["image_emb"]),
     TensorDictModule(embed_text, in_keys=["text"], out_keys=["text_emb"]),
-    TensorDictModule(fuse, in_keys=["image_emb"], out_keys=["action"]),
+    TensorDictModule(Fuse(), in_keys=["image_emb", "text_emb"], out_keys=["action"]),
 )
 
 # --- 3. CNN-based feature extractor + MLP head ------------------------------

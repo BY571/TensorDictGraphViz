@@ -50,9 +50,17 @@ class ShapeInferer:
     # -- public ------------------------------------------------------------
 
     def infer(self) -> Dict[str, Any]:
-        """Return ``{formatted_key: shape_tuple}`` for every key we could capture."""
+        """Return ``{node_id: shape_tuple}`` for every node we could capture.
+
+        - TensorDict models: keys are formatted TensorDict key names.
+        - ``nn.Sequential``: keys are ``"input"`` and ``"layer_{i}"`` — the
+          shape of the tensor *leaving* that node.
+        - Generic ``nn.Module``: keys are ``"input"`` and ``"output"`` only
+          (per-layer order is not knowable for an arbitrary ``forward``).
+        """
         try:
             import torch
+            import torch.nn as nn
         except ImportError:
             return {}
 
@@ -65,7 +73,71 @@ class ShapeInferer:
             self.model, (TensorDictModule, TensorDictSequential)
         ):
             return self._infer_td(torch)
+        if isinstance(self.model, nn.Sequential):
+            return self._infer_sequential(torch)
+        if isinstance(self.model, nn.Module):
+            return self._infer_generic(torch)
         return {}
+
+    # -- plain nn.Module paths ---------------------------------------------
+
+    def _resolve_plain_input(self, torch):
+        """A fake (or user-provided) input tensor for a non-TensorDict model."""
+        if self.sample_input is not None:
+            if hasattr(self.sample_input, "shape"):  # a tensor
+                return self.sample_input
+            raise TypeError(
+                "sample_input for nn.Sequential / nn.Module must be a tensor"
+            )
+        return self._fake_tensor_for_module(torch, self.model)
+
+    def _infer_sequential(self, torch) -> Dict[str, Any]:
+        try:
+            x = self._resolve_plain_input(torch)
+            if x is None:
+                return {}
+            was_training = self.model.training
+            self.model.eval()
+            shapes: Dict[str, Any] = {"input": tuple(x.shape)}
+            try:
+                with torch.no_grad():
+                    for i, layer in enumerate(self.model):
+                        x = layer(x)
+                        shapes[f"layer_{i}"] = tuple(x.shape)
+            finally:
+                if was_training:
+                    self.model.train()
+            return shapes
+        except Exception as e:  # noqa: BLE001
+            warnings.warn(
+                f"tensordictviz: shape inference failed ({type(e).__name__}: {e}).",
+                stacklevel=2,
+            )
+            return {}
+
+    def _infer_generic(self, torch) -> Dict[str, Any]:
+        try:
+            x = self._resolve_plain_input(torch)
+            if x is None:
+                return {}
+            was_training = self.model.training
+            self.model.eval()
+            try:
+                with torch.no_grad():
+                    out = self.model(x)
+            finally:
+                if was_training:
+                    self.model.train()
+            shapes: Dict[str, Any] = {"input": tuple(x.shape)}
+            if hasattr(out, "shape"):
+                shapes["output"] = tuple(out.shape)
+            return shapes
+        except Exception as e:  # noqa: BLE001
+            warnings.warn(
+                f"tensordictviz: shape inference failed ({type(e).__name__}: {e}).",
+                stacklevel=2,
+            )
+            return {}
 
     # -- TensorDict path ---------------------------------------------------
 

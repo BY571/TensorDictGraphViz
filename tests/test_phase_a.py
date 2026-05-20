@@ -213,10 +213,41 @@ class TestShapeInference:
             shapes = ShapeInferer(model).infer()
         assert shapes == {}
 
-    def test_non_td_model_returns_empty(self):
-        # ShapeInferer only handles TensorDictModule paths for now.
-        model = nn.Sequential(nn.Linear(4, 2))
-        assert ShapeInferer(model).infer() == {}
+    def test_sequential_per_layer_shapes(self):
+        model = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 2))
+        shapes = ShapeInferer(model).infer()
+        assert shapes["input"] == (2, 4)
+        assert shapes["layer_0"] == (2, 8)  # after Linear(4, 8)
+        assert shapes["layer_1"] == (2, 8)  # after ReLU
+        assert shapes["layer_2"] == (2, 2)  # after Linear(8, 2)
+
+    def test_generic_module_input_output_shapes(self):
+        class M(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc = nn.Linear(6, 3)
+
+            def forward(self, x):
+                return self.fc(x)
+
+        shapes = ShapeInferer(M()).infer()
+        assert shapes["input"] == (2, 6)
+        assert shapes["output"] == (2, 3)
+
+    def test_sequential_tensor_sample_input(self):
+        model = nn.Sequential(nn.Linear(7, 3))
+        shapes = ShapeInferer(model, sample_input=torch.randn(5, 7)).infer()
+        assert shapes["input"] == (5, 7)
+        assert shapes["layer_0"] == (5, 3)
+
+    def test_sequential_edge_labels_in_source(self):
+        model = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 2))
+        viz = visualize(model)
+        src = _source(viz)
+        # Running shape flows onto each edge as a label (batch dim dropped).
+        assert 'label="[4]"' in src  # input -> layer_0
+        assert 'label="[8]"' in src  # layer_0 -> layer_1
+        assert 'label="[2]"' in src  # layer_2 -> output
 
 
 # ---------------------------------------------------------------------------

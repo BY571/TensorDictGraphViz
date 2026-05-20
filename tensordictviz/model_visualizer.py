@@ -273,7 +273,10 @@ class ModelVisualizer:
                 fontname=T["font"],
             )
             self.backend.create_edge(
-                prev_node, layer_name, color=T["edge_internal"]
+                prev_node,
+                layer_name,
+                color=T["edge_internal"],
+                **self._edge_shape_attrs(prev_node),
             )
             prev_node = layer_name
 
@@ -287,7 +290,12 @@ class ModelVisualizer:
             fontcolor=T["key_text"],
             fontname=T["font"],
         )
-        self.backend.create_edge(prev_node, "output", color=T["edge_internal"])
+        self.backend.create_edge(
+            prev_node,
+            "output",
+            color=T["edge_internal"],
+            **self._edge_shape_attrs(prev_node),
+        )
 
     # -- Path 2: TensorDictModule / TensorDictSequential --------------------
 
@@ -620,9 +628,11 @@ class ModelVisualizer:
                     )
                     first_internal_node = last_internal_node = dummy
 
+            in_shape = _shape_label(self.key_shapes.get("input"))
+            out_shape = _shape_label(self.key_shapes.get("output"))
             self.backend.create_node(
                 "input",
-                "Input",
+                f"Input {in_shape}".rstrip() if in_shape else "Input",
                 shape="ellipse",
                 style="filled",
                 fillcolor=T["key_input"],
@@ -632,7 +642,7 @@ class ModelVisualizer:
             )
             self.backend.create_node(
                 "output",
-                "Output",
+                f"Output {out_shape}".rstrip() if out_shape else "Output",
                 shape="ellipse",
                 style="filled",
                 fillcolor=T["key_output"],
@@ -695,6 +705,18 @@ class ModelVisualizer:
                 self.backend.create_edge(a[0], b[0], style="invis")
 
     # -- Helpers -----------------------------------------------------------
+
+    def _edge_shape_attrs(self, source_node: str) -> Dict[str, str]:
+        """Edge attrs labelling an edge with the shape of the tensor leaving
+        ``source_node``. Empty dict when no shape was captured."""
+        label = _shape_label(self.key_shapes.get(source_node))
+        if not label:
+            return {}
+        return {
+            "label": label,
+            "fontsize": "9",
+            "fontcolor": self.theme["module_text"],
+        }
 
     def _unwrap_torchrl_inner(self, td_module):
         """Some torchrl modules expose their core nn.Module under a different attr."""

@@ -57,6 +57,7 @@ LIGHT: Dict[str, str] = {
     "edge_internal": "#9aa5b1",
     "edge_key": "#6b7280",
     "edge_state": "#c79330",
+    "edge_penwidth": "1.5",
     # clusters
     "cluster_border": "#e1e4e8",
     "cluster_fill": "#ffffff",
@@ -146,6 +147,7 @@ BLUEPRINT: Dict[str, str] = {
     "edge_internal": "#8fd4f2",
     "edge_key": "#5ce1ff",
     "edge_state": "#ffd97a",
+    "edge_penwidth": "2.6",
     "cluster_border": "#3a5f80",
     "cluster_fill": "#0d2137",
     "cluster_inner_fill": "#14365a",

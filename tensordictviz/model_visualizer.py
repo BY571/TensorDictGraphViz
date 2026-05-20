@@ -271,6 +271,7 @@ class ModelVisualizer:
                 prev_node,
                 layer_name,
                 color=T["edge_internal"],
+                penwidth=T["edge_penwidth"],
                 **self._edge_shape_attrs(prev_node),
             )
             prev_node = layer_name
@@ -289,6 +290,7 @@ class ModelVisualizer:
             prev_node,
             "output",
             color=T["edge_internal"],
+            penwidth=T["edge_penwidth"],
             **self._edge_shape_attrs(prev_node),
         )
 
@@ -475,10 +477,12 @@ class ModelVisualizer:
             )
 
             self.backend.create_edge(
-                entry_node, first_internal_node, color=T["edge_internal"]
+                entry_node, first_internal_node, color=T["edge_internal"],
+                penwidth=T["edge_penwidth"],
             )
             self.backend.create_edge(
-                last_internal_node, exit_node, color=T["edge_internal"]
+                last_internal_node, exit_node, color=T["edge_internal"],
+                penwidth=T["edge_penwidth"],
             )
 
         return entry_node, exit_node
@@ -501,7 +505,8 @@ class ModelVisualizer:
             )
             if prev_node:
                 self.backend.create_edge(
-                    prev_node, layer_name, color=T["edge_internal"]
+                    prev_node, layer_name, color=T["edge_internal"],
+                    penwidth=T["edge_penwidth"],
                 )
             else:
                 first_node = layer_name
@@ -559,7 +564,7 @@ class ModelVisualizer:
                 key_node_id,
                 color=edge_color,
                 style=edge_style,
-                penwidth="1.5",
+                penwidth=T["edge_penwidth"],
             )
         for entry_node in consumed_by.get(key, []):
             self.backend.create_edge(
@@ -567,7 +572,7 @@ class ModelVisualizer:
                 entry_node,
                 color=edge_color,
                 style=edge_style,
-                penwidth="1.5",
+                penwidth=T["edge_penwidth"],
             )
 
     # -- Path 3: generic nn.Module -----------------------------------------
@@ -634,10 +639,12 @@ class ModelVisualizer:
                 fontname=T["font"],
             )
             self.backend.create_edge(
-                "input", first_internal_node, color=T["edge_key"], penwidth="1.5"
+                "input", first_internal_node, color=T["edge_key"],
+                penwidth=T["edge_penwidth"],
             )
             self.backend.create_edge(
-                last_internal_node, "output", color=T["edge_key"], penwidth="1.5"
+                last_internal_node, "output", color=T["edge_key"],
+                penwidth=T["edge_penwidth"],
             )
 
     # -- Legend ------------------------------------------------------------
